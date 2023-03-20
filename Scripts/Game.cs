@@ -138,8 +138,6 @@ public class Game : MonoBehaviour
     // CPU make's a move
     public void makeMove()
     {
-        Debug.Log("Making Moves...");
-
         int bestMoveX;
         int bestMoveY;
 
@@ -147,24 +145,23 @@ public class Game : MonoBehaviour
         int[] scores = new int[playerBlack.Length]; // to quickly find best score and it's index(piece)
         for (int i = 0; i < playerBlack.Length; i++) // piece loop
         {
-            // mem saver
-            if (i > 1) break;
-
-            Debug.Log("Considering " + playerBlack[i].GetComponent<Chessman>().name + "'s Legal Moves...");
-            int x = playerBlack[i].GetComponent<Chessman>().GetXBoard();
-            int y = playerBlack[i].GetComponent<Chessman>().GetYBoard();
-            Move[] legals = GetLegalMoves(playerBlack[i].GetComponent<Chessman>().name, x, y, false);
-
             // default score to -1, in case of no legal moves
             int minScore = -1;
             scores[i] = -1; 
 
-            for (int j = 0; j < legals.Length; i++) { // Find Piece i's best move
+            //Debug.Log("Considering " + playerBlack[i].GetComponent<Chessman>().name + "'s Legal Moves...");
+            int x = playerBlack[i].GetComponent<Chessman>().GetXBoard();
+            int y = playerBlack[i].GetComponent<Chessman>().GetYBoard();
+            if (this.PositionOnBoard(x,y) == false) continue;
+
+            Move[] legals = GetLegalMoves(playerBlack[i].GetComponent<Chessman>().name, x, y, false);
+        
+            for (int j = 0; j < legals.Length; j++) { // Find Piece i's best move
                 if (legals[j].score > minScore) {
                     moves[i]  = legals[j];
                     scores[i] = legals[j].score;
                     minScore  = legals[j].score;
-                }                    
+                }          
             }
             
         }
@@ -172,6 +169,8 @@ public class Game : MonoBehaviour
         int bestPiece = scores.ToList().IndexOf(scores.Max()); // get best move from all pieces
         bestMoveX = moves[bestPiece].x;
         bestMoveY = moves[bestPiece].y;
+
+        Debug.Log(playerBlack[bestPiece].GetComponent<Chessman>().name + " to " + bestMoveX + ", " + bestMoveY);
 
         // Put piece in new space 
         bool attacking = false;
@@ -190,7 +189,7 @@ public class Game : MonoBehaviour
             if (col == "white")
             {
                 cp.GetComponent<Chessman>().SetXBoard(8);
-                cp.GetComponent<Chessman>().SetYBoard(8 - this.GetCaptured(col));
+                cp.GetComponent<Chessman>().SetYBoard(7 - this.GetCaptured(col));
             }
             else 
             {
@@ -210,7 +209,7 @@ public class Game : MonoBehaviour
         playerBlack[bestPiece].GetComponent<Chessman>().SetCoords(); // actually moves piece in unity
         SetPosition(playerBlack[bestPiece]); // updates game so we know the piece as moved here
 
-        Debug.Log("Move Score = " + scores[bestPiece]);
+        //Debug.Log("Move Score = " + scores[bestPiece]);
     }
 
     // Find all legal moves, call with def true to only consider attacking or defending
@@ -233,56 +232,43 @@ public class Game : MonoBehaviour
         switch(piece) 
         {
             case "black_queen":
-                for (int i = 0; i < downleft.Length; i++)
-                    if (downleft[i].score > 0) legalMoves.Add(downleft[i]);
-                for (int i = 0; i < upleft.Length; i++)
-                    if (upleft[i].score > 0) legalMoves.Add(upleft[i]);
-                for (int i = 0; i < downright.Length; i++)
-                    if (downright[i].score > 0) legalMoves.Add(downright[i]);
-                for (int i = 0; i < upright.Length; i++)
-                    if (upright[i].score > 0) legalMoves.Add(upright[i]);       
-
-                for (int i = 0; i < right.Length; i++)
-                    if (right[i].score > 0) legalMoves.Add(right[i]);          
-                for (int i = 0; i < left.Length; i++)
-                    if (left[i].score > 0) legalMoves.Add(left[i]);     
-                for (int i = 0; i < up.Length; i++)
-                    if (up[i].score > 0) legalMoves.Add(up[i]);    
-                for (int i = 0; i < down.Length; i++)
-                    if (down[i].score > 0) legalMoves.Add(down[i]);  
+                legalMoves.AddRange(downleft);
+                legalMoves.AddRange(upleft);
+                legalMoves.AddRange(downright);
+                legalMoves.AddRange(upright);      
+                legalMoves.AddRange(right);
+                legalMoves.AddRange(left);
+                legalMoves.AddRange(up);
+                legalMoves.AddRange(down); 
                 break;   
             
             case "black_king":
-                if (PointMove(x,y, 0 ,1,piece, def).score > 0) legalMoves.Add(PointMove(x,y, 0, 1,piece, def));
-                if (PointMove(x,y, 0,-1,piece, def).score > 0) legalMoves.Add(PointMove(x,y, 0,-1,piece, def));
-                if (PointMove(x,y,-1,-1,piece, def).score > 0) legalMoves.Add(PointMove(x,y,-1,-1,piece, def));
-                if (PointMove(x,y,-1, 0,piece, def).score > 0) legalMoves.Add(PointMove(x,y,-1, 0,piece, def));
-                if (PointMove(x,y,-1, 1,piece, def).score > 0) legalMoves.Add(PointMove(x,y,-1, 1,piece, def));
-                if (PointMove(x,y, 1,-1,piece, def).score > 0) legalMoves.Add(PointMove(x,y, 1,-1,piece, def));
-                if (PointMove(x,y, 1, 0,piece, def).score > 0) legalMoves.Add(PointMove(x,y, 1, 0,piece, def));
-                if (PointMove(x,y, 1, 1,piece, def).score > 0) legalMoves.Add(PointMove(x,y, 1, 1,piece, def));
+                if (PointMove(x,   y+1, piece, def).score > 0) legalMoves.Add(PointMove(x,   y+1, piece, def));
+                if (PointMove(x,   y-1, piece, def).score > 0) legalMoves.Add(PointMove(x,   y-1, piece, def));
+                if (PointMove(x-1, y-1, piece, def).score > 0) legalMoves.Add(PointMove(x-1, y-1, piece, def));
+                if (PointMove(x-1, y,   piece, def).score > 0) legalMoves.Add(PointMove(x-1, y,   piece, def));
+                if (PointMove(x-1, y+1, piece, def).score > 0) legalMoves.Add(PointMove(x-1, y+1, piece, def));
+                if (PointMove(x+1, y-1, piece, def).score > 0) legalMoves.Add(PointMove(x+1, y-1, piece, def));
+                if (PointMove(x+1, y,   piece, def).score > 0) legalMoves.Add(PointMove(x+1, y,   piece, def));
+                if (PointMove(x+1, y+1, piece, def).score > 0) legalMoves.Add(PointMove(x+1, y+1, piece, def));
                 break;
 
             case "black_bishop":
-                for (int i = 0; i < downleft.Length; i++)
-                    if (downleft[i].score > 0) legalMoves.Add(downleft[i]);
-                for (int i = 0; i < upleft.Length; i++)
-                    if (upleft[i].score > 0) legalMoves.Add(upleft[i]);
-                for (int i = 0; i < downright.Length; i++)
-                    if (downright[i].score > 0) legalMoves.Add(downright[i]);
-                for (int i = 0; i < upright.Length; i++)
-                    if (upright[i].score > 0) legalMoves.Add(upright[i]);                
+                legalMoves.AddRange(downleft);
+                legalMoves.AddRange(upleft);
+                legalMoves.AddRange(downright);
+                legalMoves.AddRange(upright);            
                 break;
             
             case "black_knight": // only add legal moves, i.e. score is positive
-                if (PointMove(x,y,-2,-1,piece, def).score > 0) legalMoves.Add(PointMove(x,y,-2,-1,piece, def));
-                if (PointMove(x,y,-2, 1,piece, def).score > 0) legalMoves.Add(PointMove(x,y,-2, 1,piece, def));
-                if (PointMove(x,y,-1,-2,piece, def).score > 0) legalMoves.Add(PointMove(x,y,-1,-2,piece, def));
-                if (PointMove(x,y,-1, 2,piece, def).score > 0) legalMoves.Add(PointMove(x,y,-1, 2,piece, def));
-                if (PointMove(x,y, 1,-2,piece, def).score > 0) legalMoves.Add(PointMove(x,y, 1,-2,piece, def));
-                if (PointMove(x,y, 1, 2,piece, def).score > 0) legalMoves.Add(PointMove(x,y, 1, 2,piece, def));
-                if (PointMove(x,y, 2,-1,piece, def).score > 0) legalMoves.Add(PointMove(x,y, 2,-1,piece, def));
-                if (PointMove(x,y, 2, 1,piece, def).score > 0) legalMoves.Add(PointMove(x,y, 2, 1,piece, def));
+                if (PointMove(x-1,y-1,piece, def).score > 0) legalMoves.Add(PointMove(x-1,y-1,piece, def));
+                if (PointMove(x-1,y+1,piece, def).score > 0) legalMoves.Add(PointMove(x-1,y+1,piece, def));
+                if (PointMove(x-1,y-2,piece, def).score > 0) legalMoves.Add(PointMove(x-1,y-2,piece, def));
+                if (PointMove(x-1,y+2,piece, def).score > 0) legalMoves.Add(PointMove(x-1,y+2,piece, def));
+                if (PointMove(x+1,y-2,piece, def).score > 0) legalMoves.Add(PointMove(x+1,y-2,piece, def));
+                if (PointMove(x+1,y+2,piece, def).score > 0) legalMoves.Add(PointMove(x+1,y+2,piece, def));
+                if (PointMove(x+2,y-1,piece, def).score > 0) legalMoves.Add(PointMove(x+2,y-1,piece, def));
+                if (PointMove(x+2,y+1,piece, def).score > 0) legalMoves.Add(PointMove(x+2,y+1,piece, def));
                 break;
 
             case "black_pawn":
@@ -298,29 +284,23 @@ public class Game : MonoBehaviour
                 break;
 
             case "black_rook":
-                for (int i = 0; i < right.Length; i++)
-                    if (right[i].score > 0) legalMoves.Add(right[i]);          
-                for (int i = 0; i < left.Length; i++)
-                    if (left[i].score > 0) legalMoves.Add(left[i]);     
-                for (int i = 0; i < up.Length; i++)
-                    if (up[i].score > 0) legalMoves.Add(up[i]);    
-                for (int i = 0; i < down.Length; i++)
-                    if (down[i].score > 0) legalMoves.Add(down[i]);  
+                legalMoves.AddRange(right);
+                legalMoves.AddRange(left);
+                legalMoves.AddRange(up);
+                legalMoves.AddRange(down); 
                 break; 
         }
 
         // convert to array
-        Move[] moves = legalMoves.ToArray();
-        return moves;
+        return legalMoves.ToArray();;
     }
 
     public Move[] LineMoves(int x, int y, int xInc, int yInc, string piece, bool def)
     {
-        Move[] moves = new Move[28]; // can't be more than 28 legal moves for a piece I think
+        List<Move> moves = new List<Move>();
         
         x += xInc;
         y += yInc;
-        int counter = 0;
 
         // while position is on board, and no piece already there
         while(this.PositionOnBoard(x,y) && this.GetPosition(x,y) == null)
@@ -331,30 +311,23 @@ public class Game : MonoBehaviour
             m.attack = false;
             m.score = CalcScore(piece,m);
             if (def) m.score = -1;
-            moves[counter] = m;
-            counter ++;
+            moves.Add(m);
 
             x += xInc;
             y += yInc;
         }
 
-        if (this.PositionOnBoard(x,y) && this.GetPosition(x,y).GetComponent<Chessman>().GetPlayer() != "black")
+        if (this.PositionOnBoard(x,y) && this.GetPosition(x,y).GetComponent<Chessman>().GetPlayer() == "white")
         {
             Move m = new Move();
             m.x = x;
             m.y = y;
             m.attack = true;
             m.score = CalcScore(piece,m);
-            moves[counter] = m;
-            counter ++; 
+            moves.Add(m);
         }
 
-        // set negative scores for rest of moves array that we didn't need to fill
-        for (int i = counter; i < moves.Length; i++){
-            moves[i].score = -1;
-        }
-
-        return moves;
+        return moves.ToArray();;
     }
 
     public Move PawnMove(int x, int y, int xInc, int yInc, string piece, bool def)
@@ -402,10 +375,8 @@ public class Game : MonoBehaviour
         }
     }
 
-    public Move PointMove(int x, int y, int xInc, int yInc, string piece, bool def)
+    public Move PointMove(int x, int y, string piece, bool def)
     {   
-        x += xInc;
-        y += yInc;
         Move m = new Move();
         m.x = x;
         m.y = y;
@@ -456,7 +427,7 @@ public class Game : MonoBehaviour
             int enemy_value = GetValue(this.GetPosition(m.x,m.y).GetComponent<Chessman>().name);
             int my_value = GetValue(piece);
             score += 60*(enemy_value/my_value);
-            Debug.Log("Capture Score = " + score);
+            //Debug.Log("Capture Score = " + score);
         }
 
         return score;
