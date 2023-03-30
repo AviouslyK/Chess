@@ -202,7 +202,7 @@ public class Chessman : MonoBehaviour
         {
             // Check if there's a piece there, and create appropriate moveplate
             GameObject cp = sc.GetPosition(x,y);
-            if (cp == null) MovePlateSpawn(x,y);  // possible bug: moveplate produced off board bc no isonboard checK?
+            if (cp == null) MovePlateSpawn(x,y);  
             else if (cp.GetComponent<Chessman>().player != player) MovePlateAttackSpawn(x,y);
         }
     }

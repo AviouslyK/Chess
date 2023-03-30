@@ -20,12 +20,17 @@ public class Game : MonoBehaviour
     private int capturedBlack = 0;
     private int capturedWhite = 0;
     private int turn = 0;
+    private bool whiteInCheck = false;
+    private bool blackInCheck = false;
 
     // value of pieces
     public Dictionary<string,int> pieceValue = new Dictionary<string,int>();
 
     // Positions and team for each chesspiece
-    private GameObject[,] positions = new GameObject[8,8]; // holds piece's at each board position
+    private GameObject[,] positions = new GameObject[9,9]; // holds piece's at each board position
+                                                           // 9x9 instead of 8x8 for extra row to 
+                                                           // move pieces out of way when calculating 
+                                                           // possible moves. 8x8 are physical locations 
     private GameObject[] playerBlack = new GameObject[16]; // holds black's pieces
     private GameObject[] playerWhite = new GameObject[16]; // holds white's pieces
 
@@ -101,7 +106,7 @@ public class Game : MonoBehaviour
 
     public bool PositionOnBoard(int x, int y)
     {
-        if (x < 0 || y < 0 || x >= positions.GetLength(0) || y >= positions.GetLength(1))
+        if (x < 0 || y < 0 || x >= 8 || y >= 8) // chessboard is 8x8
             return false;
         else 
             return true;
@@ -112,6 +117,28 @@ public class Game : MonoBehaviour
     public bool IsGameOver(){ return gameOver; }
     public int GetTurn(){ return turn/2; } // how many turns have been played (each player going counts as 1)
     public int GetValue(string p) { return pieceValue[p]; }
+    public bool IsWhiteInCheck() { return whiteInCheck; }
+    public bool IsBlackInCheck() { return blackInCheck; }
+
+    public void SetWhiteCheck(bool check) { whiteInCheck = check; }
+    public void SetBlackCheck(bool check) { blackInCheck = check; }
+
+    // helpers
+    public GameObject FindPiece(string piece_name)
+    {   
+        if (!pieceValue.ContainsKey(piece_name))
+            Debug.Log("YOU'RE TRYING TO FIND A PIECE THAT DOESNT EXIST!");
+
+        for (int i = 0; i < playerBlack.Length; i++)
+            if (playerBlack[i].name == piece_name)
+                return playerBlack[i];
+        
+        for (int i = 0; i < playerWhite.Length; i++)
+            if (playerWhite[i].name == piece_name)
+                return playerWhite[i];
+        
+        return playerWhite[0]; // should never get here
+    }
 
     public void NextTurn()
     {   
@@ -127,6 +154,13 @@ public class Game : MonoBehaviour
             gameOver = false;
             SceneManager.LoadScene("Game");
         }
+
+        // check if anyone is in check
+        Check();
+        if (IsBlackInCheck() || IsWhiteInCheck())
+            GameObject.FindGameObjectWithTag("CheckText").GetComponent<Text>().enabled = true;
+        else
+            GameObject.FindGameObjectWithTag("CheckText").GetComponent<Text>().enabled = false;
 
         if (currentPlayer == "black") // cpu's turn
         {   
@@ -261,8 +295,8 @@ public class Game : MonoBehaviour
                 break;
             
             case "black_knight": // only add legal moves, i.e. score is positive
-                if (PointMove(x-1,y-1,piece, def).score > 0) legalMoves.Add(PointMove(x-1,y-1,piece, def));
-                if (PointMove(x-1,y+1,piece, def).score > 0) legalMoves.Add(PointMove(x-1,y+1,piece, def));
+                if (PointMove(x-2,y-1,piece, def).score > 0) legalMoves.Add(PointMove(x-2,y-1,piece, def));
+                if (PointMove(x-2,y+1,piece, def).score > 0) legalMoves.Add(PointMove(x-2,y+1,piece, def));
                 if (PointMove(x-1,y-2,piece, def).score > 0) legalMoves.Add(PointMove(x-1,y-2,piece, def));
                 if (PointMove(x-1,y+2,piece, def).score > 0) legalMoves.Add(PointMove(x-1,y+2,piece, def));
                 if (PointMove(x+1,y-2,piece, def).score > 0) legalMoves.Add(PointMove(x+1,y-2,piece, def));
@@ -289,6 +323,68 @@ public class Game : MonoBehaviour
                 legalMoves.AddRange(up);
                 legalMoves.AddRange(down); 
                 break; 
+        }
+
+        
+        // if we're in check, only a legal move is one getting us out of check
+        if (IsBlackInCheck())
+        { 
+            Debug.Log("Before: " + legalMoves.Count + " moves");
+            // make each move, is piece still in check?
+            foreach (Move m in legalMoves.ToList()) // add .ToList to list so we can delete elements while looping (makes a copy)
+            {  
+                bool attacking = false;
+                if (this.GetPosition(m.x,m.y) != null && this.GetPosition(m.x,m.y).GetComponent<Chessman>().GetPlayer() == "white") 
+                    attacking = true;
+                
+                if (attacking)
+                {
+                    GameObject cp = this.GetPosition(m.x, m.y); // piece we're 'capturing'
+                    cp.GetComponent<Chessman>().SetXBoard(8); // pretend like we captured
+                    cp.GetComponent<Chessman>().SetYBoard(8); // so move off board
+                    this.SetPosition(cp);
+
+                    // save piece's original position for when we undo the move later
+                    GameObject thiscp = FindPiece(piece); // piece being moved
+                    int ogx = thiscp.GetComponent<Chessman>().GetXBoard(); 
+                    int ogy = thiscp.GetComponent<Chessman>().GetYBoard();
+                    // make the move
+                    thiscp.GetComponent<Chessman>().SetXBoard(m.x);
+                    thiscp.GetComponent<Chessman>().SetYBoard(m.y);
+                    this.SetPosition(thiscp);
+                    Check(); // update, are we still in check?
+                    if (IsBlackInCheck()) legalMoves.Remove(m); // if so, this ain't a legal move
+                    
+                    // Now undo the move
+                    cp.GetComponent<Chessman>().SetXBoard(m.x);
+                    cp.GetComponent<Chessman>().SetYBoard(m.y);
+                    this.SetPosition(cp);
+                    thiscp.GetComponent<Chessman>().SetXBoard(ogx);
+                    thiscp.GetComponent<Chessman>().SetYBoard(ogy);
+                    this.SetPosition(thiscp);
+                }
+                else // if not attacking, a bit simpler
+                {
+                    // save piece's original position for when we undo the move later
+                    GameObject thiscp = FindPiece(piece);
+                    int ogx = thiscp.GetComponent<Chessman>().GetXBoard(); 
+                    int ogy = thiscp.GetComponent<Chessman>().GetYBoard();
+                    // make the move
+                    thiscp.GetComponent<Chessman>().SetXBoard(m.x);
+                    thiscp.GetComponent<Chessman>().SetYBoard(m.y);
+                    this.SetPosition(thiscp);
+                    Check(); // update, are we still in check?
+                    if (IsBlackInCheck()) legalMoves.Remove(m); // if so, this ain't a legal move
+
+                    thiscp.GetComponent<Chessman>().SetXBoard(ogx);
+                    thiscp.GetComponent<Chessman>().SetYBoard(ogy);
+                    this.SetPosition(thiscp);
+                }
+
+                // reset check status
+                SetBlackCheck(true);
+            }
+            Debug.Log("After removing moves that don't resolve check: " + legalMoves.Count + " moves");
         }
 
         // convert to array
@@ -433,35 +529,6 @@ public class Game : MonoBehaviour
         return score;
     }
 
-    /* Too Slow
-    public int CountDefense(string piece, Move m)
-    {
-        int defscore = 0;
-        if (piece == "black_king") return defscore; // king can't gaurd anyone
-
-        // second moves show who this piece is defending
-        Move[] second_move = GetLegalMoves(piece, m.x, m.y, true);
-
-        // count how many pieces we'd be defending
-        for (int i = 0; i < second_move.Length; i++)
-        {   
-            int x = second_move[i].x;
-            int y = second_move[i].y;
-
-            if (this.PositionOnBoard(x,y) && this.GetPosition(x,y) == null)
-                defscore += 0;
-            else if (this.PositionOnBoard(x,y) && this.GetPosition(x,y).GetComponent<Chessman>().GetPlayer() == "black")
-            {
-                defscore += 3*GetValue(this.GetPosition(x,y).GetComponent<Chessman>().name);
-            }
-        }
-
-        defscore -= GetValue(piece);
-
-        return defscore;
-    }
-    */
-
     public void Winner(string playerWinner)
     {
         gameOver = true;
@@ -471,6 +538,20 @@ public class Game : MonoBehaviour
         GameObject.FindGameObjectWithTag("WinnerText").GetComponent<Text>().enabled = true;
         GameObject.FindGameObjectWithTag("WinnerText").GetComponent<Text>().text = playerWinner + " is the winner";
         GameObject.FindGameObjectWithTag("RestartText").GetComponent<Text>().enabled = true;
+    }
+    
+    // Find out if either king is in check
+    public void Check()
+    {   
+        // kings are 4th element in the player's piece arrays
+        if (CountAttackers(playerBlack[4].GetComponent<Chessman>().GetXBoard(), playerBlack[4].GetComponent<Chessman>().GetYBoard(), playerBlack[4].GetComponent<Chessman>().name) > 0)
+            SetBlackCheck(true);
+        else
+            SetBlackCheck(false);
+        if (CountAttackers(playerWhite[4].GetComponent<Chessman>().GetXBoard(), playerWhite[4].GetComponent<Chessman>().GetYBoard(), playerWhite[4].GetComponent<Chessman>().name) > 0)
+            SetWhiteCheck(true);
+        else 
+            SetWhiteCheck(false);
     }
 
      // counts how many friendly pieces are defending the square x,y
@@ -524,9 +605,10 @@ public class Game : MonoBehaviour
     {   
         int attackers = 0;
 
-        // is enemy pawn diagonally in front?
+        
         if (piece.Substring(0, 5) == "white")
         {
+            // is enemy pawn diagonally in front?
             attackers += FoeHere(x,y,-1, 1,"black_pawn");
             attackers += FoeHere(x,y, 1, 1,"black_pawn");
 
@@ -547,7 +629,7 @@ public class Game : MonoBehaviour
             // is enemy pawn diagonally in front?
             attackers += FoeHere(x,y,-1,-1,"white_pawn");
             attackers += FoeHere(x,y, 1,-1,"white_pawn");
-
+            
             // is enemy bishop attacking?
             attackers += FoeHere(x,y, 1, 1,"white_bishop");
             attackers += FoeHere(x,y, 1,-1,"white_bishop");
@@ -559,6 +641,16 @@ public class Game : MonoBehaviour
             attackers += FoeHere(x,y, 0, 1,"white_rook");
             attackers += FoeHere(x,y,-1, 0,"white_rook");
             attackers += FoeHere(x,y, 0,-1,"white_rook");
+
+            // is enemy queen attacking?
+            attackers += FoeHere(x,y, 1, 0,"white_queen");
+            attackers += FoeHere(x,y, 0, 1,"white_queen");
+            attackers += FoeHere(x,y,-1, 0,"white_queen");
+            attackers += FoeHere(x,y, 0,-1,"white_queen");
+            attackers += FoeHere(x,y, 1, 1,"white_queen");
+            attackers += FoeHere(x,y, 1,-1,"white_queen");
+            attackers += FoeHere(x,y,-1, 1,"white_queen");
+            attackers += FoeHere(x,y,-1,-1,"white_queen");
         }    
 
         return attackers;
@@ -576,12 +668,12 @@ public class Game : MonoBehaviour
                 return false;
             else if (this.GetPosition(x,y) == null) // empty square
                 return false;
-            else if (this.GetPosition(x,y).GetComponent<Chessman>().name.Substring(0, 5) == piece.Substring(0, 5))  // same color piece
+            else if (piece == this.GetPosition(x,y).GetComponent<Chessman>().name) // the friendly piece "piece", is here at x,y
                 return true;
             else 
                 return false;
         }
-        else if (piece.Substring(6, 4) == "bish" || piece.Substring(6, 4) == "rook" || piece.Substring(6, 4) == "quee") 
+        else if (piece.Contains("bishop") || piece.Contains("rook") || piece.Contains("queen")) 
         {
             while(this.PositionOnBoard(x,y) && this.GetPosition(x,y) == null) // go through diagonal until you hit a piece or go off the board
             {   
@@ -592,7 +684,7 @@ public class Game : MonoBehaviour
                 return false;
             else if (this.GetPosition(x,y) == null) // empty square
                 return false;
-            else if (this.GetPosition(x,y).GetComponent<Chessman>().name.Substring(0, 5) == piece.Substring(0, 5)) // same color piece
+            else if (piece == this.GetPosition(x,y).GetComponent<Chessman>().name) // the friendly piece "piece", is here at x,y
                 return true;
             else 
                 return false;
@@ -602,7 +694,7 @@ public class Game : MonoBehaviour
     }
 
 
-    // return true if there is an enemy piece at this square
+    // return value of enemy piece at this square
     public int FoeHere(int x, int y, int xIncrement, int yIncrement, string piece)
     {   
         x += xIncrement;
@@ -614,28 +706,25 @@ public class Game : MonoBehaviour
                     return 0;
                 else if (this.GetPosition(x,y) == null) // empty square
                     return 0;
-                else if (piece.Substring(0, 5) == "white" && this.GetPosition(x,y).GetComponent<Chessman>().GetPlayer() == "black") 
-                    return GetValue(this.GetPosition(x,y).GetComponent<Chessman>().name);
-                else if (piece.Substring(0, 5) == "black" && this.GetPosition(x,y).GetComponent<Chessman>().GetPlayer() == "white") 
+                else if (piece == this.GetPosition(x,y).GetComponent<Chessman>().name)
                     return GetValue(this.GetPosition(x,y).GetComponent<Chessman>().name);
                 else 
                     return 0;
             }
 
-            else if (piece.Substring(6, 4) == "bish" || piece.Substring(6, 4) == "rook" || piece.Substring(6, 4) == "quee") 
+            else if (piece.Contains("bishop") || piece.Contains("rook") || piece.Contains("queen")) 
             {
                 while(this.PositionOnBoard(x,y) && this.GetPosition(x,y) == null) // go through diagonal until you hit a piece or go off the board
                 {   
                     x += xIncrement;
                     y += yIncrement;
+                    //Debug.Log("x = " + x + ", y = " + y);
                 }
                 if (!this.PositionOnBoard(x,y)) // not valid square
                     return 0;
                 else if (this.GetPosition(x,y) == null) // empty square
                     return 0;
-                else if (piece.Substring(0, 5) == "white" && this.GetPosition(x,y).GetComponent<Chessman>().GetPlayer() == "black") 
-                    return GetValue(this.GetPosition(x,y).GetComponent<Chessman>().name);
-                else if (piece.Substring(0, 5) == "black" && this.GetPosition(x,y).GetComponent<Chessman>().GetPlayer() == "white") 
+                else if (piece == this.GetPosition(x,y).GetComponent<Chessman>().name) 
                     return GetValue(this.GetPosition(x,y).GetComponent<Chessman>().name);
                 else 
                     return 0;
