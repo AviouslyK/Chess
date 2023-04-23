@@ -62,6 +62,46 @@ public class MovePlate : MonoBehaviour
             
         }
 
+        // If you're moving the king, you can no longer castle
+        if (reference.GetComponent<Chessman>().name.Contains("king")) 
+        {
+            controller.GetComponent<Game>().whiteHasCastledL = true;
+            controller.GetComponent<Game>().whiteHasCastledR = true;
+        }
+
+        // If you're moving the left rook, you can no longer castle left
+        if (reference.GetComponent<Chessman>().name.Contains("rook") && reference.GetComponent<Chessman>().GetXBoard() == 0) 
+        {
+            controller.GetComponent<Game>().whiteHasCastledL = true;
+        }
+
+        // If you're moving the right rook, you can no longer castle right
+        if (reference.GetComponent<Chessman>().name.Contains("rook") && reference.GetComponent<Chessman>().GetXBoard() == 7) 
+        {
+            controller.GetComponent<Game>().whiteHasCastledR = true;
+        }
+
+        // if castling right, also move the rook
+        if (reference.GetComponent<Chessman>().name.Contains("king") && controller.GetComponent<Game>().whiteCastleRightOK && matrixX == 6 && matrixY == 0)
+        {
+            GameObject cp = controller.GetComponent<Game>().GetPosition(matrixX+1, matrixY); // get rook
+            controller.GetComponent<Game>().SetPositionEmpty(cp.GetComponent<Chessman>().GetXBoard(), cp.GetComponent<Chessman>().GetYBoard()); // set rooks original position to empty
+            cp.GetComponent<Chessman>().SetXBoard(matrixX-1); // move rook
+            cp.GetComponent<Chessman>().SetCoords(); // move rook visually, in game
+            controller.GetComponent<Game>().whiteHasCastledL= true; // don't let white castle again
+            controller.GetComponent<Game>().whiteHasCastledR= true; // don't let white castle again
+        }
+        // Castling Left
+        if (reference.GetComponent<Chessman>().name.Contains("king") && controller.GetComponent<Game>().whiteCastleLeftOK && matrixX == 2 && matrixY == 0)
+        {
+            GameObject cp = controller.GetComponent<Game>().GetPosition(matrixX-2, matrixY);
+            controller.GetComponent<Game>().SetPositionEmpty(cp.GetComponent<Chessman>().GetXBoard(), cp.GetComponent<Chessman>().GetYBoard()); // set rooks original position to empty
+            cp.GetComponent<Chessman>().SetXBoard(matrixX+1);
+            cp.GetComponent<Chessman>().SetCoords();
+            controller.GetComponent<Game>().whiteHasCastledL = true;
+            controller.GetComponent<Game>().whiteHasCastledR= true; // don't let white castle again
+        }
+        
         // set original location to empty
         controller.GetComponent<Game>().SetPositionEmpty(reference.GetComponent<Chessman>().GetXBoard(), reference.GetComponent<Chessman>().GetYBoard());
 
