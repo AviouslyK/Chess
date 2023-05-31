@@ -88,6 +88,7 @@ public class MovePlate : MonoBehaviour
             controller.GetComponent<Game>().SetPositionEmpty(cp.GetComponent<Chessman>().GetXBoard(), cp.GetComponent<Chessman>().GetYBoard()); // set rooks original position to empty
             cp.GetComponent<Chessman>().SetXBoard(matrixX-1); // move rook
             cp.GetComponent<Chessman>().SetCoords(); // move rook visually, in game
+            controller.GetComponent<Game>().SetPosition(cp); // update rook's global position
             controller.GetComponent<Game>().whiteHasCastledL= true; // don't let white castle again
             controller.GetComponent<Game>().whiteHasCastledR= true; // don't let white castle again
         }
@@ -98,6 +99,7 @@ public class MovePlate : MonoBehaviour
             controller.GetComponent<Game>().SetPositionEmpty(cp.GetComponent<Chessman>().GetXBoard(), cp.GetComponent<Chessman>().GetYBoard()); // set rooks original position to empty
             cp.GetComponent<Chessman>().SetXBoard(matrixX+1);
             cp.GetComponent<Chessman>().SetCoords();
+            controller.GetComponent<Game>().SetPosition(cp); // update rook's global position
             controller.GetComponent<Game>().whiteHasCastledL = true;
             controller.GetComponent<Game>().whiteHasCastledR= true; // don't let white castle again
         }
