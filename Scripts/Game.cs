@@ -247,7 +247,7 @@ public class Game : MonoBehaviour
         for (int i = 0; i < playerWhite.Length; i++) // piece loop
         {
             // default score to -1, in case of no legal moves
-            int minScore = -1;
+            int bestScore = -1;
             scores[i] = -1; 
 
             //Debug.Log("Considering " + playerBlack[i].GetComponent<Chessman>().name + "'s Legal Moves...");
@@ -258,9 +258,9 @@ public class Game : MonoBehaviour
             Move[] legals = GetLegalMoves(playerWhite[i].GetComponent<Chessman>().name, x, y);
         
             for (int j = 0; j < legals.Length; j++) { // Find Piece i's best move
-                if (legals[j].score > minScore) {
+                if (legals[j].score > bestScore) {
                     scores[i] = legals[j].score;
-                    minScore  = legals[j].score;
+                    bestScore  = legals[j].score;
                 }          
             }
             
@@ -282,7 +282,7 @@ public class Game : MonoBehaviour
         for (int i = 0; i < playerBlack.Length; i++) // piece loop
         {
             // default score to -1, in case of no legal moves
-            int minScore = -1;
+            int bestScore = -1;
             scores[i] = -1; 
 
             //Debug.Log("Considering " + playerBlack[i].GetComponent<Chessman>().name + "'s Legal Moves...");
@@ -293,10 +293,10 @@ public class Game : MonoBehaviour
             Move[] legals = GetLegalMoves(playerBlack[i].GetComponent<Chessman>().name, x, y);
         
             for (int j = 0; j < legals.Length; j++) { // Find Piece i's best move
-                if (legals[j].score > minScore) {
+                if (legals[j].score > bestScore) {
                     moves[i]  = legals[j];
                     scores[i] = legals[j].score;
-                    minScore  = legals[j].score;
+                    bestScore  = legals[j].score;
                 }          
             }
             
