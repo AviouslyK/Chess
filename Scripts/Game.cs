@@ -152,7 +152,7 @@ public class Game : MonoBehaviour
     public GameObject FindPiece(string piece_name)
     {   
         if (!pieceValue.ContainsKey(piece_name))
-            Debug.Log("YOU'RE TRYING TO FIND A PIECE THAT DOESNT EXIST!");
+            Debug.Log("YOU'RE TRYING TO FIND A PIECE THAT DOESN'T EXIST!");
 
         for (int i = 0; i < playerBlack.Length; i++)
             if (playerBlack[i].name == piece_name)
@@ -220,8 +220,8 @@ public class Game : MonoBehaviour
 
         if (currentPlayer == "black") // cpu's turn
         {   
-            Debug.Log("whiteCastleLeftOK = " + this.whiteCastleLeftOK + " , whiteCastleRightOK = " + whiteCastleRightOK);
-            Debug.Log("blackCastleLeftOK = " + this.blackCastleLeftOK + " , blackCastleRightOK = " + blackCastleRightOK);
+            //Debug.Log("whiteCastleLeftOK = " + this.whiteCastleLeftOK + " , whiteCastleRightOK = " + whiteCastleRightOK);
+            //Debug.Log("blackCastleLeftOK = " + this.blackCastleLeftOK + " , blackCastleRightOK = " + blackCastleRightOK);
             Invoke("makeMove", 2); // wait 3 seconds then move
             if (gameOver == true && Input.GetMouseButtonDown(0))
             {
@@ -386,7 +386,7 @@ public class Game : MonoBehaviour
             SetPosition(playerBlack[bestPiece]); // updates game so we know the piece as moved here
 
 
-            //Debug.Log("Move Score = " + scores[bestPiece]);
+            Debug.Log("Move Score = " + scores[bestPiece]);
         }
     }
 
@@ -666,31 +666,36 @@ public class Game : MonoBehaviour
     public int CalcScore(string piece, Move m) // piece that's moving, where it's going x,y,
     {
         int score = Random.Range(0,100);
-        
+  
         // attacking moves are good - general
-        if (m.attack == true) score += Random.Range(0,100);
+        if (m.attack == true) score += Random.Range(0,200);
 
-        // is position on board and no piece already there? 
-        if (this.PositionOnBoard(m.x,m.y) && this.GetPosition(m.x,m.y) == null) 
-        {
-            // todo add map for each piece, favoring certain squares
-            if (this.GetTurn() < 10) 
-                if (m.x >=2 && m.y >=2) // center is good
-                    score += Random.Range(0,45); 
-        }
+        // In early game, control the center
+        if (this.GetTurn() < 10 && (3 <= m.x && m.x <= 6) && (3 <= m.y && m.y <= 6)) // center is good
+            score += Random.Range(0,350); 
         
         // Being defended is good
-        score += Random.Range(0,10*CountDefenders(m.x, m.y, piece));
+        score += Random.Range(0,100*CountDefenders(m.x, m.y, piece));
 
         // Being attacked is bad
-        score -= Random.Range(0,10*CountAttackers(m.x, m.y, piece));
+        score -= GetValue(piece)*Random.Range(0,400*CountAttackers(m.x, m.y, piece));
+
+        // Retreating is good
+        GameObject this_piece = FindPiece(piece);
+        int x = this_piece.GetComponent<Chessman>().GetXBoard(); 
+        int y = this_piece.GetComponent<Chessman>().GetYBoard(); 
+        int attackers_before = CountAttackers(x, y, piece);
+        int attackers_after = CountAttackers(m.x, m.y, piece);
+        if (attackers_after < attackers_before)
+            score += Random.Range(0,300);
 
         // Capturing Pieces is good
         if (m.attack == true) 
         {   
             int enemy_value = GetValue(this.GetPosition(m.x,m.y).GetComponent<Chessman>().name);
             int my_value = GetValue(piece);
-            score += 60*(enemy_value/my_value);
+            if (enemy_value >= my_value)
+                score += Random.Range(0,350);
             //Debug.Log("Capture Score = " + score);
         }
 
@@ -768,7 +773,7 @@ public class Game : MonoBehaviour
     }
 
 
-     // counts how many enemy pieces are attacking the x,y square
+    // counts how many enemy pieces are attacking the x,y square
     public int CountAttackers(int x, int y, string piece)
     {   
         int attackers = 0;
@@ -821,30 +826,30 @@ public class Game : MonoBehaviour
         if (piece.Contains("black"))
         {
             // is enemy pawn diagonally in front?
-            attackers += FoeHere(x,y,-1,-1,"white_pawn");
-            attackers += FoeHere(x,y, 1,-1,"white_pawn");
+            attackers += 10*FoeHere(x,y,-1,-1,"white_pawn");
+            attackers += 10*FoeHere(x,y, 1,-1,"white_pawn");
             
             // is enemy bishop attacking?
-            attackers += FoeHere(x,y, 1, 1,"white_bishop");
-            attackers += FoeHere(x,y, 1,-1,"white_bishop");
-            attackers += FoeHere(x,y,-1, 1,"white_bishop");
-            attackers += FoeHere(x,y,-1,-1,"white_bishop");
+            attackers += 7*FoeHere(x,y, 1, 1,"white_bishop");
+            attackers += 7*FoeHere(x,y, 1,-1,"white_bishop");
+            attackers += 7*FoeHere(x,y,-1, 1,"white_bishop");
+            attackers += 7*FoeHere(x,y,-1,-1,"white_bishop");
 
             // is enemy knight attacking?
-            attackers += FoeHere(x,y, 1, 2,"white_knight");
-            attackers += FoeHere(x,y,-1, 2,"white_knight");
-            attackers += FoeHere(x,y, 2, 1,"white_knight");
-            attackers += FoeHere(x,y, 2,-1,"white_knight");
-            attackers += FoeHere(x,y, 1,-2,"white_knight");
-            attackers += FoeHere(x,y,-1,-2,"white_knight");
-            attackers += FoeHere(x,y,-2, 1,"white_knight");
-            attackers += FoeHere(x,y,-2,-1,"white_knight");
+            attackers += 7*FoeHere(x,y, 1, 2,"white_knight");
+            attackers += 7*FoeHere(x,y,-1, 2,"white_knight");
+            attackers += 7*FoeHere(x,y, 2, 1,"white_knight");
+            attackers += 7*FoeHere(x,y, 2,-1,"white_knight");
+            attackers += 7*FoeHere(x,y, 1,-2,"white_knight");
+            attackers += 7*FoeHere(x,y,-1,-2,"white_knight");
+            attackers += 7*FoeHere(x,y,-2, 1,"white_knight");
+            attackers += 7*FoeHere(x,y,-2,-1,"white_knight");
 
             // is enemy rook attacking?
-            attackers += FoeHere(x,y, 1, 0,"white_rook");
-            attackers += FoeHere(x,y, 0, 1,"white_rook");
-            attackers += FoeHere(x,y,-1, 0,"white_rook");
-            attackers += FoeHere(x,y, 0,-1,"white_rook");
+            attackers += 5*FoeHere(x,y, 1, 0,"white_rook");
+            attackers += 5*FoeHere(x,y, 0, 1,"white_rook");
+            attackers += 5*FoeHere(x,y,-1, 0,"white_rook");
+            attackers += 5*FoeHere(x,y, 0,-1,"white_rook");
 
             // is enemy queen attacking?
             attackers += FoeHere(x,y, 1, 0,"white_queen");
