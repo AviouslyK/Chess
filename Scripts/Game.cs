@@ -663,6 +663,7 @@ public class Game : MonoBehaviour
             return m;
         }
     }
+    // Assign a score to a move
     public int CalcScore(string piece, Move m) // piece that's moving, where it's going x,y,
     {
         int score = Random.Range(0,100);
